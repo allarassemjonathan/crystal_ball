@@ -84,7 +84,8 @@ def main():
     st.markdown(
         """
         <div style='text-align: center;'>
-            <h1>🇸🇳 Prédiction du risque d'épidemie de paludisme au Sénégal</h1>
+            <img src='https://upload.wikimedia.org/wikipedia/commons/f/fd/Flag_of_Senegal.svg' width='120'>
+            <h1> Prédiction du risque d'épidemie de paludisme au Sénégal</h1>
             <p style='font-size:16px;'>Visualisation des probabilités régionales de paludisme selon le mois.<br>
             <i>"Nopp naa la" — Prenons soin les uns des autres 💚</i></p>
         </div>
