@@ -1,9 +1,8 @@
 import streamlit as st
 import folium
-import json
 from streamlit_folium import folium_static
 
-# Senegal regions with approximate coordinates for centroids
+# --- Données des régions du Sénégal ---
 SENEGAL_REGIONS = {
     "Dakar": {"coords": [14.7167, -17.4677]},
     "Diourbel": {"coords": [14.6667, -16.2333]},
@@ -20,6 +19,7 @@ SENEGAL_REGIONS = {
     "Thiès": {"coords": [14.7886, -16.9260]},
     "Ziguinchor": {"coords": [12.5833, -16.2667]}
 }
+
 
 # Malaria probability matrix (14 regions x 30 time periods)
 # Each row represents a region, each column represents a time period
@@ -41,45 +41,33 @@ PROBABILITY_MATRIX = [
 ]
 
 def get_probabilities_for_time(time_index):
-    """Get probability dictionary for all regions at a specific time index"""
     region_names = list(SENEGAL_REGIONS.keys())
     probabilities = {}
-    
     for i, region in enumerate(region_names):
-        # Convert from 0-1 scale to 0-100 percentage
         probabilities[region] = PROBABILITY_MATRIX[i][time_index] * 100
-    
     return probabilities
 
 def get_color(probability):
-    """Get color based on malaria probability (0-100)"""
     if probability < 20:
-        return '#fee5d9'  # Very light red
+        return '#fee5d9'
     elif probability < 40:
-        return '#fcae91'  # Light red
+        return '#fcae91'
     elif probability < 60:
-        return '#fb6a4a'  # Medium red
+        return '#fb6a4a'
     elif probability < 80:
-        return '#de2d26'  # Red
+        return '#de2d26'
     else:
-        return '#a50f15'  # Dark red
+        return '#a50f15'
 
 def create_map(probabilities):
-    """Create a Folium map with color-coded regions"""
-    m = folium.Map(
-        location=[14.4974, -14.4524],  # Center of Senegal
-        zoom_start=7,
-        tiles='OpenStreetMap'
-    )
-    
+    m = folium.Map(location=[14.4974, -14.4524], zoom_start=7, tiles='OpenStreetMap')
     for region, info in SENEGAL_REGIONS.items():
         prob = probabilities.get(region, 0)
         color = get_color(prob)
-        
         folium.CircleMarker(
             location=info["coords"],
             radius=25,
-            popup=f"<b>{region}</b><br>Malaria Risk: {prob:.1f}%",
+            popup=f"<b>{region}</b><br>Risque de paludisme : {prob:.1f}%",
             tooltip=f"{region}: {prob:.1f}%",
             color=color,
             fill=True,
@@ -87,83 +75,100 @@ def create_map(probabilities):
             fillOpacity=0.7,
             weight=2
         ).add_to(m)
-    
     return m
 
 def main():
-    st.set_page_config(page_title="Senegal Malaria Risk Map", layout="wide")
-    
-    st.title("🗺️ Senegal Malaria Risk Map")
-    st.markdown("Color-coded regional malaria probability visualization over time")
-    
-    # Get number of time periods from matrix
+    st.set_page_config(page_title="Carte du Paludisme au Sénégal", layout="wide")
+
+    # --- En-tête avec drapeau ---
+    st.markdown(
+        """
+        <div style='text-align: center;'>
+            <h1>🇸🇳 Prédiction du risque d'épidemie de paludisme au Sénégal</h1>
+            <p style='font-size:16px;'>Visualisation des probabilités régionales de paludisme selon le mois.<br>
+            <i>"Nopp naa la" — Prenons soin les uns des autres 💚</i></p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     num_time_periods = len(PROBABILITY_MATRIX[0])
-    
-    # Sidebar for time selection
+
+    # --- Barre latérale ---
     with st.sidebar:
-        st.header("⏰ Time Period Selection")
-        
-        # Slider to select time period (1 to 30 months)
+        st.header("⏰ Sélection du mois")
         time_period = st.slider(
-            "Select Month",
+            "Choisir un mois",
             min_value=1,
             max_value=num_time_periods,
             value=1,
             step=1,
-            help=f"Select month from 1 to {num_time_periods}"
+            help=f"Sélectionnez un mois (1 à {num_time_periods})"
         )
-        
-        st.info(f"**Currently Viewing:**\n\nMonth {time_period}")
-        
-        # Get probabilities for selected time period (subtract 1 for 0-indexing)
+
+        st.info(f"**Mois sélectionné :** {time_period}")
         probabilities = get_probabilities_for_time(time_period - 1)
-        
+
         st.markdown("---")
-        
-        # Display current probabilities
-        st.subheader("📊 Regional Probabilities")
+        st.subheader("📊 Probabilités d'une épidemie par région")
         for region in sorted(probabilities.keys()):
             color = get_color(probabilities[region])
             st.markdown(
                 f"<div style='padding: 5px; margin: 2px; background-color: {color}; border-radius: 3px;'>"
-                f"<b>{region}:</b> {probabilities[region]:.1f}%</div>",
+                f"<b>{region} :</b> {probabilities[region]:.1f}%</div>",
                 unsafe_allow_html=True
             )
-    
-    # Main content - Map display
+
+    # --- Mise en page responsive ---
+    st.markdown(
+        """
+        <style>
+        @media (max-width: 768px) {
+            .block-container {
+                padding: 0.5rem !important;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     col1, col2 = st.columns([3, 1])
-    
+
     with col1:
-        st.subheader(f"Malaria Risk Map - Month {time_period}")
+        st.subheader(f"🗺️ Risque d'épidemie - Mois {time_period}")
         m = create_map(probabilities)
         folium_static(m, width=800, height=600)
-    
+
     with col2:
-        st.subheader("Risk Legend")
-        st.markdown("""
-        <div style='background: linear-gradient(to bottom, #a50f15, #de2d26, #fb6a4a, #fcae91, #fee5d9); 
-                    height: 200px; width: 50px; border: 1px solid #ccc;'></div>
-        <div style='margin-top: 10px;'>
-            <b>High Risk (80-100%)</b><br>
-            <b>Medium-High (60-80%)</b><br>
-            <b>Medium (40-60%)</b><br>
-            <b>Low-Medium (20-40%)</b><br>
-            <b>Low Risk (0-20%)</b>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.subheader("Summary Statistics")
+        st.subheader(" Légende du Risque")
+        st.markdown(
+            """
+            <div style='background: linear-gradient(to bottom, #a50f15, #de2d26, #fb6a4a, #fcae91, #fee5d9);
+                        height: 200px; width: 50px; border: 1px solid #ccc;'></div>
+            <div style='margin-top: 10px;'>
+                <b>Risque élevé (80–100%)</b><br>
+                <b>Risque moyen-élevé (60–80%)</b><br>
+                <b>Risque moyen (40–60%)</b><br>
+                <b>Risque faible-moyen (20–40%)</b><br>
+                <b>Faible risque (0–20%)</b>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.subheader("📈 Statistiques Générales")
         if probabilities:
             avg_risk = sum(probabilities.values()) / len(probabilities)
             max_region = max(probabilities, key=probabilities.get)
             min_region = min(probabilities, key=probabilities.get)
-            
-            st.metric("Average Risk", f"{avg_risk:.1f}%")
-            st.metric("Highest Risk", f"{max_region}", f"{probabilities[max_region]:.1f}%")
-            st.metric("Lowest Risk", f"{min_region}", f"{probabilities[min_region]:.1f}%")
-        
+
+            st.metric("Risque moyen", f"{avg_risk:.1f}%")
+            st.metric("Région la plus touchée", f"{max_region}", f"{probabilities[max_region]:.1f}%")
+            st.metric("Région la moins touchée", f"{min_region}", f"{probabilities[min_region]:.1f}%")
+
         st.markdown("---")
-        st.caption(f"Data: 14 regions × 30 time periods")
+        st.caption("Données simulées — 14 régions × 30 périodes temporelles. <br><i>Jërëjëf !</i>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
